@@ -1,0 +1,42 @@
+name: skills_swap
+description: "A new Flutter project."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ✅ دعم تعدد اللغات
+  flutter_localizations:
+    sdk: flutter
+
+  # 📦 الحزم الإضافية
+  lottie: ^3.2.0
+  http: ^1.2.2
+  image_picker: ^1.1.2
+  shared_preferences: ^2.3.4
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  intl_utils: ^2.8.5  # ✅ لتوليد ملفات الترجمة
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/lotties/
+
+# ✅ إعدادات الترجمة (غيّرنا المسار إلى مجلد Languages)
+flutter_intl:
+  enabled: true
+  arb_dir: lib/Languages
+  output_dir: lib/generated

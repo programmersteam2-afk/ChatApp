@@ -1,0 +1,30 @@
+pluginManagement {
+    def flutterSdkPath = {
+        def properties = new Properties()
+        file("local.properties").withInputStream { properties.load(it) }
+        def flutterSdkPath = properties.getProperty("flutter.sdk")
+        assert flutterSdkPath != null : "flutter.sdk not set in local.properties"
+        return flutterSdkPath
+    }()
+
+    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    // ⚙️ تحميل إضافات Flutter الأساسية
+    id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+
+    // ✅ تحديث Android Gradle Plugin إلى إصدار متوافق مع Flutter 3.35 وما فوق
+    id "com.android.application" version "8.3.2" apply false
+
+    // ✅ تحديث Kotlin لإصدار حديث متوافق مع Gradle 8.x
+    id "org.jetbrains.kotlin.android" version "1.9.23" apply false
+}
+
+include(":app")

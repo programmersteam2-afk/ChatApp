@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "632896579678",
+    "project_id": "chat-team-app",
+    "storage_bucket": "chat-team-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:632896579678:android:64e41bd06ded3e8d8caccf",
+        "android_client_info": {
+          "package_name": "com.teamnana.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "632896579678-aqd5fqdm4t2hqt4qcdlhis064gilfilr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.teamnana.app",
+            "certificate_hash": "5c969f839cd29b9a4c9f3ee421a39197f990a4d3"
+          }
+        },
+        {
+          "client_id": "632896579678-98f504lns12u25co0rodk61q1kp89mbp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBoLYv54Ms6yl9ULe66Lk0HMF-ycBLDHfA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "632896579678-98f504lns12u25co0rodk61q1kp89mbp.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "632896579678-3p3o28l6ei4cmlavnl2o6e5f1ossbtla.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.teamnana.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

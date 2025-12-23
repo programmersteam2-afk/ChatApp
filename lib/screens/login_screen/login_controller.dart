@@ -34,13 +34,27 @@ class LoginController extends BaseController {
     ), isScrollControlled: true, ignoreSafeArea: false);
   }
 
-  void googleLogin() {
-    final GoogleSignIn googleSignIn = GoogleSignIn.instance;
-    googleSignIn.initialize();
-    googleSignIn.authenticate().then((googleSignInAccount) {
-      print('Email : ${googleSignInAccount.email}');
-      registerUser(fullName: googleSignInAccount.displayName, identity: googleSignInAccount.email, loginType: LoginType.google);
-    });
+  void googleLogin() async {
+    try {
+      final googleSignIn = GoogleSignIn.instance;
+
+      await googleSignIn.initialize(
+        serverClientId: '632896579678-98f504lns12u25co0rodk61q1kp89mbp.apps.googleusercontent.com',
+      );
+
+      final GoogleSignInAccount account = await googleSignIn.authenticate();
+
+      log('Email: ${account.email}');
+
+      registerUser(
+        fullName: account.displayName,
+        identity: account.email,
+        loginType: LoginType.google,
+      );
+    } catch (e, s) {
+      log('Google login error: $e');
+      log('$s');
+    }
   }
 
   void appleLogin() async {

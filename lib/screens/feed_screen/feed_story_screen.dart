@@ -20,135 +20,145 @@ class FeedStoryScreen extends StatelessWidget {
       color: cBG,
       height: 100,
       alignment: Alignment.centerLeft,
-      child: GetBuilder(
-          init: controller,
-          builder: (controller) {
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              primary: true,
-              child: Row(
-                children: [
-                  myCard(controller),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    // padding: const EdgeInsets.symmetric(: 5),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: controller.storyUsers.length,
-                    itemBuilder: (context, index) {
-                      var storyUser = controller.storyUsers[index];
-                      return GestureDetector(
-                        onTap: () {
-                          Get.bottomSheet(StoryScreen(users: controller.storyUsers, index: index), isScrollControlled: true, ignoreSafeArea: false).then((value) {
-                            controller.fetchStories();
-                          });
-                        },
-                        child: Container(
-                          // color: Colors.red,
-                          padding: const EdgeInsets.symmetric(horizontal: 1),
-                          width: 80,
-                          child: Column(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: storyUser.isAllStoryShown() ? cLightText.withValues(alpha: 0.4) : cPrimary,
-                                      width: 2,
-                                    ),
-                                    shape: BoxShape.circle),
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                child: MyCachedProfileImage(
-                                  imageUrl: storyUser.profile,
-                                  fullName: storyUser.fullName,
-                                  width: 60,
-                                  height: 60,
-                                  cornerRadius: 60,
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 5,
-                              ),
-                              SizedBox(
-                                width: 72,
-                                child: Text(
-                                  storyUser.username ?? '',
-                                  style: MyTextStyle.gilroyMedium(size: 14),
-                                  textAlign: TextAlign.center,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+      child: GetBuilder<FeedStoriesController>(
+        init: controller,
+        builder: (controller) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                myCard(controller),
+                ListView.builder(
+                  shrinkWrap: true,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: controller.storyUsers.length,
+                  itemBuilder: (context, index) {
+                    final storyUser = controller.storyUsers[index];
+
+                    return GestureDetector(
+                      onTap: () {
+                        Get.bottomSheet(
+                          StoryScreen(
+                            users: controller.storyUsers,
+                            index: index,
                           ),
+                          isScrollControlled: true,
+                          ignoreSafeArea: false,
+                        ).then((_) {
+                          controller.fetchStories();
+                        });
+                      },
+                      child: SizedBox(
+                        width: 80,
+                        height: 100, // ⭐ تثبيت الارتفاع
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: storyUser.isAllStoryShown() ? cLightText.withValues(alpha: 0.4) : cPrimary,
+                                  width: 2,
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              padding: const EdgeInsets.all(2),
+                              child: MyCachedProfileImage(
+                                imageUrl: storyUser.profile,
+                                fullName: storyUser.fullName,
+                                width: 56,
+                                // 🔻 أصغر لمنع overflow
+                                height: 56,
+                                cornerRadius: 56,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              width: 70,
+                              child: Text(
+                                storyUser.username ?? '',
+                                maxLines: 1,
+                                style: MyTextStyle.gilroyMedium(size: 13),
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            );
-          }),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
   Widget myCard(FeedStoriesController controller) {
-    var isAnyStory = controller.myUser.stories?.isNotEmpty ?? false;
+    final bool isAnyStory = controller.myUser.stories?.isNotEmpty ?? false;
+
     return GestureDetector(
       onTap: () {
         InterstitialManager.shared.loadAd();
-        Get.bottomSheet(CreateStoryScreen(user: controller.myUser), isScrollControlled: true, ignoreSafeArea: false).then((value) {
+        Get.bottomSheet(
+          CreateStoryScreen(user: controller.myUser),
+          isScrollControlled: true,
+          ignoreSafeArea: false,
+        ).then((_) {
           controller.fetchMyStories();
           InterstitialManager.shared.showAd();
         });
       },
-      child: Container(
+      child: SizedBox(
         width: 90,
-        // color: Colors.green,
+        height: 100, // ⭐ تثبيت الارتفاع
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                  border: Border.all(
-                    color: Colors.transparent,
-                    width: 2,
-                  ),
-                  shape: BoxShape.circle),
-              // padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                        border: Border.all(
-                          color: isAnyStory ? (controller.myUser.isAllStoryShown() ? cLightText.withValues(alpha: 0.4) : cPrimary) : Colors.transparent,
-                          width: 2,
-                        ),
-                        shape: BoxShape.circle),
-                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-                    child: MyCachedProfileImage(
-                      imageUrl: controller.myUser.profile,
-                      fullName: controller.myUser.fullName,
-                      width: 60,
-                      height: 60,
-                      cornerRadius: 60,
+            Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: isAnyStory ? (controller.myUser.isAllStoryShown() ? cLightText.withValues(alpha: 0.4) : cPrimary) : Colors.transparent,
+                      width: 2,
                     ),
+                    shape: BoxShape.circle,
                   ),
-                  Container(
-                    margin: EdgeInsets.all(3),
-                    decoration: const BoxDecoration(color: cWhite, shape: BoxShape.circle),
-                    child: const Icon(
-                      Icons.add_circle,
-                      color: cPrimary,
-                      size: 18,
-                    ),
-                  )
-                ],
-              ),
+                  padding: const EdgeInsets.all(2),
+                  child: MyCachedProfileImage(
+                    imageUrl: controller.myUser.profile,
+                    fullName: controller.myUser.fullName,
+                    width: 56,
+                    height: 56,
+                    cornerRadius: 56,
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                    color: cWhite,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.add_circle,
+                    color: cPrimary,
+                    size: 18,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(
-              height: 5,
-            ),
+            const SizedBox(height: 4),
             Text(
               LKeys.you.tr,
-              style: MyTextStyle.gilroyMedium(size: 14),
+              maxLines: 1,
+              style: MyTextStyle.gilroyMedium(size: 13),
               overflow: TextOverflow.ellipsis,
             ),
           ],

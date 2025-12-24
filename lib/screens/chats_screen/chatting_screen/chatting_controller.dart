@@ -23,6 +23,7 @@ import 'package:untitled/screens/rooms_screen/room_controller.dart';
 import 'package:untitled/screens/sheets/confirmation_sheet.dart';
 import 'package:untitled/utilities/const.dart';
 import 'package:untitled/utilities/firebase_const.dart';
+import 'package:untitled/common/managers/chat_sound_manager.dart';
 
 class ChattingController extends BlockUserController {
   ScrollController scrollController = ScrollController();
@@ -263,6 +264,22 @@ class ChattingController extends BlockUserController {
         if (data != null) {
           switch (element.type) {
             case DocumentChangeType.added:
+              messages.add(data);
+              messages.sort(
+                (a, b) => (b.id ?? '').compareTo((a.id ?? '')),
+              );
+
+              // 🔔 تشغيل صوت إذا الرسالة ليست مني
+              if (data.senderId != myUser?.id) {
+                // وإذا لم أكن داخل نفس المحادثة
+                if (SessionManager.shared.getStoredConversation() != chatUserRoom?.conversationId) {
+                  ChatSoundManager.shared.playIncomingMessage();
+                }
+              }
+
+              update();
+              break;
+
               // print("add");
               messages.add(data);
               messages.sort(
@@ -273,7 +290,10 @@ class ChattingController extends BlockUserController {
             case DocumentChangeType.modified:
               // print("modify");
               var index = messages.indexWhere((element) => element.id == data.id);
-              messages[index] = data;
+              if (index != -1) {
+                messages[index] = data;
+              }
+
               update();
               break;
             case DocumentChangeType.removed:
@@ -283,7 +303,7 @@ class ChattingController extends BlockUserController {
           }
         }
       }
-      if (lastMsgQuery == null) {
+      if (lastMsgQuery == null && event.docs.isNotEmpty) {
         lastMsgQuery = event.docs.last;
       }
     });

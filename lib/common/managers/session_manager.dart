@@ -6,17 +6,24 @@ import 'package:untitled/models/registration.dart';
 import 'package:untitled/models/setting_model.dart';
 
 class SessionManager {
-  static var shared = SessionManager();
-  var storage = GetStorage();
-  var conversationId = '';
+  static final SessionManager shared = SessionManager();
+
+  final GetStorage storage = GetStorage();
+  String conversationId = '';
+
+  /* ================= Language ================= */
 
   void setLang(Lang lang) {
     storage.write("lang", lang.language.languageCode);
   }
 
   Lang getLang() {
-    return LANGUAGES.firstWhere((element) => element.language.languageCode == (storage.read("lang") ?? LANGUAGES.first.language.languageCode));
+    return LANGUAGES.firstWhere(
+      (e) => e.language.languageCode == (storage.read("lang") ?? LANGUAGES.first.language.languageCode),
+    );
   }
+
+  /* ================= Conversation ================= */
 
   String getStoredConversation() {
     return conversationId;
@@ -26,82 +33,124 @@ class SessionManager {
     conversationId = conversation;
   }
 
+  /* ================= Message Read Date ================= */
+
   DateTime? getLastMessageReadDate({required String spaceId}) {
-    var date = storage.read(spaceId);
-    if (date is DateTime)
+    final date = storage.read(spaceId);
+    if (date is DateTime) {
       return date;
-    else
-      return null;
+    }
+    return null;
+  }
+
+  Future<void> restoreSession() async {
+    final data = storage.read("user");
+
+    if (data != null && data is Map<String, dynamic>) {
+      setUser(User.fromJson(data));
+      setLogin(true);
+    }
   }
 
   void setLastMessageReadDate({required String spaceId}) {
     storage.write(spaceId, DateTime.now());
   }
 
+  /* ================= Login ================= */
+
   bool isLogin() {
     return storage.read(SessionKeys.isLogin) ?? false;
-  }
-
-  void setUsersForGroup({required String conversationId, required List<User> users}) {
-    storage.write(conversationId, users);
-  }
-
-  List<User> getUsersForGroup({required String conversationId}) {
-    var users = storage.read(conversationId);
-    if (users is List<User>) {
-      return users;
-    } else if (users is List<dynamic>) {
-      return users.map((user) => User.fromJson(user)).toList();
-    }
-    return [];
   }
 
   void setLogin(bool isLog) {
     storage.write(SessionKeys.isLogin, isLog);
   }
 
-  void setUser(User? obj) {
-    storage.write("user", obj);
+  /* ================= User ================= */
+
+  void setUser(User? user) {
+    if (user == null) {
+      storage.remove("user");
+    } else {
+      storage.write("user", user.toJson());
+    }
   }
 
   User? getUser() {
-    var user = storage.read("user");
-    if (user is User?) {
-      return user;
-    } else {
-      return User.fromJson(user);
+    final data = storage.read("user");
+
+    if (data == null) return null;
+
+    if (data is Map<String, dynamic>) {
+      return User.fromJson(data);
     }
+
+    return null;
   }
 
   int getUserID() {
     return (getUser()?.id ?? 0).toInt();
   }
 
+  /* ================= Group Users ================= */
+
+  void setUsersForGroup({
+    required String conversationId,
+    required List<User> users,
+  }) {
+    storage.write(
+      conversationId,
+      users.map((e) => e.toJson()).toList(),
+    );
+  }
+
+  List<User> getUsersForGroup({required String conversationId}) {
+    final users = storage.read(conversationId);
+
+    if (users is List) {
+      return users.whereType<Map<String, dynamic>>().map((e) => User.fromJson(e)).toList();
+    }
+
+    return [];
+  }
+
+  /* ================= Settings ================= */
+
   void setSettings(Settings settings) {
-    storage.write("setting", settings);
+    storage.write("setting", settings.toJson());
   }
 
   Settings? getSettings() {
-    var data = storage.read("setting");
+    final data = storage.read("setting");
+
     if (data is Map<String, dynamic>) {
       return Settings.fromJson(data);
-    } else if (data is Settings) {
-      return data;
     }
+
     return null;
   }
 
   String getBannerAdId() {
-    return (Platform.isAndroid ? (getSettings()?.adBannerAndroid) : (getSettings()?.adBannerIOs)) ?? '';
+    if (Platform.isAndroid) {
+      return getSettings()?.adBannerAndroid ?? '';
+    } else {
+      return getSettings()?.adBannerIOs ?? '';
+    }
   }
 
   String getInterstitialAdId() {
-    return (Platform.isAndroid ? (getSettings()?.adInterstitialAndroid) : (getSettings()?.adInterstitialIOs)) ?? '';
+    if (Platform.isAndroid) {
+      return getSettings()?.adInterstitialAndroid ?? '';
+    } else {
+      return getSettings()?.adInterstitialIOs ?? '';
+    }
   }
 
   bool isAdMobOn() {
-    return getSettings()?.isAdmobOn == 1 ? true : false;
+    return getSettings()?.isAdmobOn == 1;
   }
+
+  /* ================= Clear ================= */
 
   void clear() {
     storage.erase();
@@ -109,5 +158,5 @@ class SessionManager {
 }
 
 class SessionKeys {
-  static const isLogin = "isLogin";
+  static const String isLogin = "isLogin";
 }

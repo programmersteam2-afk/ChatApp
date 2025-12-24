@@ -85,12 +85,19 @@ class ChatsScreen extends StatelessWidget {
   }
 
   Widget buildSegment(String text, int index, ChatsScreensController controller) {
-    return Container(
-      alignment: Alignment.center,
+    return SizedBox(
       width: (Get.width / 3) - 30,
-      child: Text(
-        text.toUpperCase(),
-        style: MyTextStyle.gilroySemiBold(size: 13, color: controller.selectedPage == index ? cWhite : cBlack).copyWith(letterSpacing: 2),
+      child: Center(
+        child: Text(
+          text.toUpperCase(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: MyTextStyle.gilroySemiBold(
+            size: 12,
+            color: controller.selectedPage == index ? cWhite : cBlack,
+          ),
+        ),
       ),
     );
   }

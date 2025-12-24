@@ -69,37 +69,49 @@ class LoginController extends BaseController {
   void registerUser({String? fullName, required String identity, required LoginType loginType}) {
     startLoading();
     FirebaseNotificationManager.shared.getNotificationToken((token) {
-      UserService.shared.registration(
-          name: fullName,
-          identity: identity,
-          deviceToken: token,
-          loginType: loginType,
-          completion: (p0) {
-            SessionManager.shared.setLogin(true);
+      if (token.isEmpty || token == 'No Token') {
+        debugPrint('❌ FCM Token غير صالح، سيتم التسجيل بدون توكن');
+        token = '';
+      } else {
+        debugPrint('🔥 FCM Token صالح وسيتم إرساله: $token');
+      }
 
-            Widget w = InterestScreen();
-            var user = p0.data;
-            if (isPurchaseConfig) {
-              Purchases.logIn('${user?.id ?? 0}');
-            }
-            if (user?.isPushNotifications == 1) {
-              FirebaseNotificationManager.shared.subscribeToTopic(notificationTopic);
-              NotificationService.shared.subscribeToAllMyRoom();
-            }
-            if (user?.isBlock == 1) {
-              w = const BlockedByAdminScreen();
-            } else if (user?.interestIds == null) {
-              w = InterestScreen();
-            } else if (user?.username == null) {
-              w = const UserNameScreen();
-            } else if (user?.profile == null) {
-              w = const ProfilePictureScreen();
-            } else {
-              w = TabBarScreen();
-            }
-            Get.offAll(() => w);
-            stopLoading();
-          });
+      UserService.shared.registration(
+        name: fullName,
+        identity: identity,
+        deviceToken: token,
+        loginType: loginType,
+        completion: (p0) {
+          SessionManager.shared.setLogin(true);
+
+          Widget w = InterestScreen();
+          var user = p0.data;
+
+          if (isPurchaseConfig) {
+            Purchases.logIn('${user?.id ?? 0}');
+          }
+
+          if (user?.isPushNotifications == 1) {
+            FirebaseNotificationManager.shared.subscribeToTopic(notificationTopic);
+            NotificationService.shared.subscribeToAllMyRoom();
+          }
+
+          if (user?.isBlock == 1) {
+            w = const BlockedByAdminScreen();
+          } else if (user?.interestIds == null) {
+            w = InterestScreen();
+          } else if (user?.username == null) {
+            w = const UserNameScreen();
+          } else if (user?.profile == null) {
+            w = const ProfilePictureScreen();
+          } else {
+            w = TabBarScreen();
+          }
+
+          Get.offAll(() => w);
+          stopLoading();
+        },
+      );
     });
   }
 }

@@ -3,127 +3,185 @@ import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:get/get.dart';
 import 'package:untitled/common/managers/logger.dart';
 import 'package:untitled/common/managers/session_manager.dart';
 import 'package:untitled/utilities/const.dart';
 import 'package:untitled/utilities/params.dart';
 
 class FirebaseNotificationManager {
-  static var shared = FirebaseNotificationManager();
-  FirebaseMessaging firebaseMessaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  // Singleton
+  static final FirebaseNotificationManager shared = FirebaseNotificationManager._internal();
 
-  AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'chatter', // id
-      'Chatter Notification', // title
-      playSound: true,
-      enableLights: true,
-      enableVibration: true,
-      importance: Importance.max);
+  FirebaseNotificationManager._internal() {}
 
-  FirebaseNotificationManager() {
-    init();
-  }
+  // ================== INSTANCES ==================
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
-  String newMessageId = '';
+  String _lastMessageId = '';
 
-  void init() async {
-    subscribeToTopic(notificationTopic);
+  // ================== ANDROID CHANNEL ==================
+  final AndroidNotificationChannel _channel = const AndroidNotificationChannel(
+    'chatter',
+    'Chatter Notifications',
+    description: 'Chat notifications',
+    importance: Importance.max,
+    playSound: true, // ✅ صوت النظام
+    enableVibration: true,
+  );
 
-    flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+  // ================== INIT ==================
+  Future<void> init() async {
+    debugPrint('🟡 FCM: بدء التهيئة');
 
-    flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()?.requestPermissions(alert: true, sound: true);
-
-    await firebaseMessaging.requestPermission(alert: true, badge: false, sound: true);
-
-    var initializationSettingsAndroid = const AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
+    // 1️⃣ طلب صلاحيات الإشعارات
+    final permission = await _firebaseMessaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
     );
 
-    var initializationSettingsIOS = const DarwinInitializationSettings(defaultPresentAlert: true, defaultPresentSound: true, defaultPresentBadge: false);
+    debugPrint('🟢 FCM: حالة الصلاحيات = ${permission.authorizationStatus}');
 
-    var initializationSettings = InitializationSettings(android: initializationSettingsAndroid, iOS: initializationSettingsIOS);
+    // 2️⃣ تهيئة flutter_local_notifications
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    const iosInit = DarwinInitializationSettings(
+      defaultPresentAlert: true,
+      defaultPresentSound: true,
+      defaultPresentBadge: true,
+    );
 
+    final initSettings = InitializationSettings(android: androidInit, iOS: iosInit);
+
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        debugPrint('🟣 FCM: تم الضغط على الإشعار');
+        debugPrint('🟣 FCM: payload = ${response.payload}');
+
+        final payload = response.payload;
+        if (payload != null && payload.isNotEmpty) {
+          _openChat(payload);
+        }
+      },
+    );
+
+    debugPrint('🟢 FCM: Local Notifications مهيأة');
+
+    // 3️⃣ إنشاء Notification Channel (Android)
+    await _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(_channel);
+
+    debugPrint('🟢 FCM: Notification Channel جاهز');
+
+    // 4️⃣ Foreground listener
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      if (message.data[Param.conversationId] == SessionManager.shared.getStoredConversation()) {
-        print('In Same Chat');
+      debugPrint('🚨 onMessage اشتغل');
+      debugPrint('🚨 notification = ${message.notification}');
+      debugPrint('🚨 data = ${message.data}');
+
+      debugPrint('📩 FCM: رسالة واردة والتطبيق مفتوح');
+      debugPrint('📩 FCM DATA = ${message.data}');
+
+      final conversationId = message.data[Param.conversationId];
+      final currentConversation = SessionManager.shared.getStoredConversation();
+
+      if (conversationId != null && conversationId == currentConversation) {
+        // 🔔 إشعار نظامي بصوت فقط بدون إظهار
+        showNotification(message);
         return;
       }
-      if (message.messageId != newMessageId || Platform.isAndroid) {
-        newMessageId = message.messageId!;
-        print('Notification: ${message.messageId}');
+
+      if (message.messageId != _lastMessageId || Platform.isAndroid) {
+        _lastMessageId = message.messageId ?? '';
+        debugPrint('🔔 FCM: عرض إشعار');
         showNotification(message);
       }
     });
 
-    await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(channel);
-    getNotificationToken(
-      (token) {},
-    );
+    // 5️⃣ 🔥 جلب التوكن (هنا يتم استدعاء الدالة)
+    getNotificationToken((token) {
+      debugPrint('🔥🔥🔥 FCM TOKEN = $token');
+    });
+
+    debugPrint('✅ FCM: التهيئة اكتملت');
   }
 
+  // ================== SHOW NOTIFICATION ==================
   void showNotification(RemoteMessage message) {
-    flutterLocalNotificationsPlugin.show(
-      1,
-      message.data['title'],
-      message.data['body'],
-      NotificationDetails(iOS: const DarwinNotificationDetails(presentSound: true, presentAlert: true, presentBadge: false), android: AndroidNotificationDetails(channel.id, channel.name)),
+    debugPrint('🟣 FCM: دخول showNotification');
+
+    final title = message.notification?.title ?? message.data['title'] ?? appName;
+    final body = message.notification?.body ?? message.data['body'] ?? '';
+
+    final androidDetails = AndroidNotificationDetails(
+      _channel.id,
+      _channel.name,
+      channelDescription: _channel.description,
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
     );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentSound: true,
+      presentBadge: true,
+      sound: 'default',
+    );
+
+    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+    _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      details,
+    );
+
+    debugPrint('✅ FCM: flutterLocalNotifications.show تم تنفيذها');
   }
 
+  // ================== OPEN CHAT ==================
+  void _openChat(String conversationId) {
+    Loggers.success('➡ فتح محادثة من الإشعار: $conversationId');
+    SessionManager.shared.setStoredConversation(conversationId);
+
+    // حسب نظامك (Route / Tab)
+    // مثال:
+    // Get.toNamed('/chat', arguments: conversationId);
+  }
+
+  // ================== TOKEN (⬅️ هذه الدالة التي سألت عنها) ==================
   void getNotificationToken(Function(String token) completion) {
     try {
-      FirebaseMessaging.instance.getToken().then(
-        (value) {
-          if (value?.isEmpty == true || value == null) {
-            Loggers.error('Token: $value');
-            completion('No Token');
-          } else {
-            Loggers.success('Token: $value');
-            completion(value);
-          }
-        },
-        onError: () {
+      _firebaseMessaging.getToken().then((value) {
+        if (value == null || value.isEmpty) {
+          debugPrint('🔴 FCM: التوكن فارغ');
           completion('No Token');
-        },
-      );
+        } else {
+          Loggers.success('🟢 FCM Token: $value');
+          completion(value);
+        }
+      });
     } catch (e) {
+      debugPrint('❌ FCM: خطأ أثناء جلب التوكن $e');
       completion('No Token');
     }
   }
 
-  void subscribeToTopic(String topic) async {
-    var user = SessionManager.shared.getUser();
-    if (user == null || user.isPushNotifications == 1) {
-      await firebaseMessaging.subscribeToTopic('${topic}_${Platform.isIOS ? 'ios' : 'android'}').onError((error, stackTrace) {
-        print(error);
-      });
-
-      if (kDebugMode) await firebaseMessaging.subscribeToTopic('test_${topic}_${Platform.isIOS ? 'ios' : 'android'}');
-    }
+  // ================== TOPIC ==================
+  Future<void> subscribeToTopic(String topic) async {
+    await _firebaseMessaging.subscribeToTopic(
+      '${topic}_${Platform.isIOS ? 'ios' : 'android'}',
+    );
   }
 
-  void unsubscribeToTopic(String topic) async {
-    await firebaseMessaging.unsubscribeFromTopic('${topic}_${Platform.isIOS ? 'ios' : 'android'}');
-
-    if (kDebugMode) await firebaseMessaging.subscribeToTopic('test_${topic}_${Platform.isIOS ? 'ios' : 'android'}');
-  }
-
-  void setupListener() async {
-    FirebaseMessaging.onMessage.listen(
-      (RemoteMessage message) {
-        print("Notification Receive Success :: ${message.notification?.body}");
-        Map<String, dynamic> body = message.data;
-        String? conversationId = body[Param.conversationId];
-        if (conversationId == SessionManager.shared.getStoredConversation()) {
-          print("In same chat");
-          return;
-        }
-
-        showNotification(message);
-      },
+  Future<void> unsubscribeToTopic(String topic) async {
+    await _firebaseMessaging.unsubscribeFromTopic(
+      '${topic}_${Platform.isIOS ? 'ios' : 'android'}',
     );
   }
 }
